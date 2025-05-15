@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Help Desk Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body class="bg-gray-100">
+    <div class="container px-4 py-8">
+        <!-- Header -->
+        <div class="bg-blue-600 text-white rounded-t-lg p-4 shadow-lg">
+            <h2 class="text-xl font-bold flex items-center">
+                <i class="fas fa-robot mr-2"></i>
+                Student Help Desk Chatbot
+            </h2>
+            <p class="text-sm text-blue-100">Ask me anything about campus services</p>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div class="bg-white rounded-b-lg shadow-lg mb-4">
+            <div id="chatContainer" class="h-96 overflow-y-auto p-4 space-y-3">
+                <!-- Welcome message -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 bg-blue-500 rounded-full p-2">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="ml-3 bg-gray-100 rounded-lg p-3 max-w-3/4">
+                        <p class="text-gray-700">Hello! I'm your Student Help Desk assistant. How can I help you today?
+                        </p>
+                    </div>
+                </div>
+                <!-- Chat messages will be inserted here -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-gray-200 p-4">
+                <form id="chatForm" class="flex items-center">
+                    <input type="text" id="userInput"
+                        class="flex-grow border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ask something...">
+                    <button type="submit"
+                        class="bg-blue-600 text-white rounded-r-lg px-4 py-2 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Questions -->
+        <div class="bg-white rounded-lg shadow-lg p-4">
+            <h3 class="font-medium text-gray-700 mb-2">Quick Questions</h3>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    class="quick-question bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition">Library
+                    hours</button>
+                <button
+                    class="quick-question bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition">Exam
+                    schedule</button>
+                <button
+                    class="quick-question bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition">Financial
+                    aid</button>
+                <button
+                    class="quick-question bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition">Course
+                    registration</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const chatContainer = document.getElementById('chatContainer');
+            const chatForm = document.getElementById('chatForm');
+            const userInput = document.getElementById('userInput');
+            const quickQuestions = document.querySelectorAll('.quick-question');
+
+            // Handle form submission
+            chatForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                if (userInput.value.trim() === '') return;
+                sendMessage(userInput.value);
+                userInput.value = '';
+            });
+
+            // Handle quick questions
+            quickQuestions.forEach(button => {
+                button.addEventListener('click', function () {
+                    sendMessage(this.textContent);
+                });
+            });
+
+            async function sendMessage(message) {
+                // Add user message to chat
+                addMessage(message, 'user');
+
+                // Show loading indicator
+                const loadingId = showLoading();
+
+                try {
+                    // Send to backend
+                    const response = await fetch('http://localhost:8000/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    // Hide loading indicator
+                    hideLoading(loadingId);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        addMessage(data.response, 'bot');
+                    } else {
+                        addMessage("Sorry, I'm having trouble connecting to the server. Please try again later.", 'bot');
+                    }
+                } catch (error) {
+                    // Hide loading indicator
+                    hideLoading(loadingId);
+                    addMessage("Sorry, I'm having trouble connecting to the server. Please try again later.", 'bot');
+                }
+            }
+
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'flex items-start ' + (sender === 'user' ? 'justify-end' : '');
+
+                if (sender === 'user') {
+                    messageDiv.innerHTML = `
+                        <div class="mr-3 bg-blue-600 text-white rounded-lg p-3 max-w-3/4">
+                            <p>${text}</p>
+                        </div>
+                        <div class="flex-shrink-0 bg-gray-300 rounded-full p-2">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="flex-shrink-0 bg-blue-500 rounded-full p-2">
+                            <i class="fas fa-robot text-white"></i>
+                        </div>
+                        <div class="ml-3 bg-gray-100 rounded-lg p-3 max-w-3/4">
+                            <p class="text-gray-700">${text}</p>
+                        </div>
+                    `;
+                }
+
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            function showLoading() {
+                const loadingDiv = document.createElement('div');
+                const id = Date.now();
+                loadingDiv.id = 'loading-' + id;
+                loadingDiv.className = 'flex items-start';
+                loadingDiv.innerHTML = `
+                    <div class="flex-shrink-0 bg-blue-500 rounded-full p-2">
+                        <i class="fas fa-robot text-white"></i>
+                    </div>
+                    <div class="ml-3 bg-gray-100 rounded-lg p-3">
+                        <div class="flex space-x-1">
+                            <div class="dot-flashing bg-blue-500 rounded-full w-2 h-2"></div>
+                            <div class="dot-flashing bg-blue-500 rounded-full w-2 h-2 animation-delay-200"></div>
+                            <div class="dot-flashing bg-blue-500 rounded-full w-2 h-2 animation-delay-400"></div>
+                        </div>
+                    </div>
+                `;
+
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    @keyframes dot-flashing {
+                        0% { opacity: 0.2; }
+                        50% { opacity: 1; }
+                        100% { opacity: 0.2; }
+                    }
+                    .dot-flashing {
+                        animation: dot-flashing 1s infinite linear;
+                    }
+                    .animation-delay-200 {
+                        animation-delay: 0.2s;
+                    }
+                    .animation-delay-400 {
+                        animation-delay: 0.4s;
+                    }
+                `;
+                document.head.appendChild(style);
+
+                chatContainer.appendChild(loadingDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                return id;
+            }
+
+            function hideLoading(id) {
+                const loadingDiv = document.getElementById('loading-' + id);
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
